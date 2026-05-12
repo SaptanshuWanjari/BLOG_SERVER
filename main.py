@@ -1,11 +1,13 @@
 import os
 import logging
+import httpx
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
 from generator import get_random_topic, get_random_member, generate_blog
 from database import get_user_id_by_email, save_draft, get_draft, publish_blog, format_blog_to_markdown, delete_draft
 from bot import send_approval_request
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv()
 
@@ -14,15 +16,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GDG AI Blog Automation")
 
-from pathlib import Path
-
 # Configuration
 BASE_DIR = Path(__file__).parent
 DATASET_PATH = BASE_DIR / "dataset" / "content.topic.json"
 MEMBERS_PATH = BASE_DIR / "dataset" / "members.json"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-
-
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+WEBSITE_URL = os.environ.get("WEBSITE_URL") # Need this to hit the upload API
 
 class PublishRequest(BaseModel):
     draft_id: str
@@ -64,7 +64,6 @@ def process_blog_generation():
                 publisher_name=member["name"]
             )
             logger.info(f"Draft saved and notification sent. Draft ID: {draft['id']}")
-
             
     except Exception as e:
         logger.error(f"Error in process_blog_generation: {e}", exc_info=True)
@@ -93,26 +92,94 @@ def execute_publish(draft_id: str, banner_url: str):
         logger.error(f"Publish failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+async def upload_to_cloudinary(file_content: bytes, filename: str):
+    """
+    Uploads a file to the website's Cloudinary API route.
+    """
+    if not WEBSITE_URL:
+        logger.error("WEBSITE_URL not set in environment")
+        return None
+        
+    upload_api_url = f"{WEBSITE_URL.rstrip('/')}/api/upload"
+    
+    async with httpx.AsyncClient() as client:
+        files = {"file": (filename, file_content, "image/jpeg")}
+        data = {"folder": "BLOG_BANNERS"}
+        try:
+            response = await client.post(upload_api_url, files=files, data=data, timeout=30.0)
+            if response.status_code == 200:
+                result = response.json()
+                return result.get("url") or result.get("secure_url")
+            else:
+                logger.error(f"Upload API failed with status {response.status_code}: {response.text}")
+        except Exception as e:
+            logger.error(f"Error uploading to Cloudinary API: {e}")
+    return None
+
+async def download_telegram_file(file_id: str):
+    """
+    Downloads a file from Telegram servers.
+    """
+    async with httpx.AsyncClient() as client:
+        # Get file path
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}"
+        resp = await client.get(url)
+        if resp.status_code != 200:
+            return None
+        
+        file_path = resp.json()["result"]["file_path"]
+        
+        # Download file
+        download_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}"
+        file_resp = await client.get(download_url)
+        if file_resp.status_code == 200:
+            return file_resp.content
+    return None
+
 @app.post("/telegram-webhook")
 async def telegram_webhook(request: Request):
     """
     Listens for replies in Telegram to publish blogs.
-    Expected pattern: PUBLISH BLOG [DraftID] [BannerURL]
+    Supports text commands and photo uploads with captions.
     """
     data = await request.json()
-    if "message" in data and "text" in data["message"]:
-        text = data["message"]["text"].strip()
-        if text.upper().startswith("PUBLISH BLOG"):
-            parts = text.split()
-            if len(parts) >= 4:
-                draft_id = parts[2]
-                banner_url = parts[3]
-                logger.info(f"Telegram trigger: Publishing draft {draft_id}")
+    message = data.get("message")
+    if not message:
+        return {"status": "ignored"}
+
+    text = message.get("text", "")
+    caption = message.get("caption", "")
+    photo = message.get("photo")
+
+    # Command can be in text or caption
+    cmd_text = text if text else caption
+    
+    if cmd_text.upper().startswith("PUBLISH BLOG"):
+        parts = cmd_text.split()
+        if len(parts) >= 3:
+            draft_id = parts[2]
+            banner_url = parts[3] if len(parts) >= 4 else None
+            
+            # Case 1: Photo uploaded with caption
+            if photo and not banner_url:
+                logger.info(f"Telegram trigger: Photo upload for draft {draft_id}")
+                # Get largest photo
+                file_id = photo[-1]["file_id"]
+                file_content = await download_telegram_file(file_id)
+                if file_content:
+                    banner_url = await upload_to_cloudinary(file_content, f"banner_{draft_id}.jpg")
+            
+            # Case 2: Link provided in command or photo upload successful
+            if banner_url:
+                logger.info(f"Telegram trigger: Publishing draft {draft_id} with banner {banner_url}")
                 try:
                     execute_publish(draft_id, banner_url)
                     return {"status": "success"}
                 except Exception as e:
                     logger.error(f"Webhook publish failed: {e}")
+            else:
+                logger.error("No banner URL found and no photo uploaded")
+                
     return {"status": "ignored"}
 
 if __name__ == "__main__":

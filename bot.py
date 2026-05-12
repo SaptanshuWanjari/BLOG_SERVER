@@ -18,9 +18,11 @@ def send_approval_request(title: str, summary: str, draft_id: str, publisher_nam
         f"📝 **Title:** {title}\n"
         f"🆔 **Draft ID:** `{draft_id}`\n\n"
         f"📖 **Executive Summary:**\n{summary[:600]}...\n\n"
-        f"✅ **To publish, reply with:**\n"
-        f"`PUBLISH BLOG {draft_id} [BANNER_IMAGE_URL]`"
+        f"✅ **To publish, either:**\n"
+        f"1. Reply with `PUBLISH BLOG {draft_id} [BANNER_URL]`\n"
+        f"2. **Upload an image** with the caption `PUBLISH BLOG {draft_id}`"
     )
+
 
 
     # 1. Send to Discord (Outgoing only)
