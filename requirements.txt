@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+supabase
+langchain
+langchain-groq
+langchain-ollama
+pydantic
+python-dotenv
+httpx
