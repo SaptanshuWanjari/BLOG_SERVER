@@ -55,7 +55,9 @@ CRITICAL CONSTRAINTS FOR LENGTH AND QUALITY:
 2. VERBOSITY & DEPTH: Each major text field (`background`, `core_concepts`, `architecture_deep_dive`, `how_it_works`, `performance_and_scalability`, `security_and_reliability`, `common_pitfalls`, `real_world_use_cases`, `future_trends`) MUST be extensive.
 3. SEMANTIC FORMATTING (CRITICAL): Do NOT output giant walls of text. Break your explanations down using rich Markdown formatting WITHIN the JSON strings. Use `###` for subheadings, **bold** for key terms, and `-` or `1.` for lists to make the content scannable and semantically organized. If you use tables, ensure they follow proper Markdown syntax with newlines (`\n`) after every row and the header separator.
 
-4. TECHNICAL RIGOR: Explain the "why", the "how", and the "what if". Discuss the internals, the math, the operational realities, and the distributed systems implications where applicable.
+4. NO REDUNDANT HEADINGS: Do NOT include the section name itself (e.g., "## Core Concepts") at the beginning of the text fields. The system adds these automatically. Start directly with the analysis or description.
+5. TECHNICAL RIGOR: Explain the "why", the "how", and the "what if".
+ Discuss the internals, the math, the operational realities, and the distributed systems implications where applicable.
 
 {{
   "title": "",
