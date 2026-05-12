@@ -20,7 +20,8 @@ def send_approval_request(title: str, summary: str, draft_id: str, publisher_nam
         f"📖 **Executive Summary:**\n{summary[:600]}...\n\n"
         f"✅ **To publish, either:**\n"
         f"1. Reply with `PUBLISH BLOG {draft_id} [BANNER_URL]`\n"
-        f"2. **Upload an image** with the caption `PUBLISH BLOG {draft_id}`"
+        f"2. **Upload an image** with the caption `PUBLISH BLOG {draft_id}`\n"
+        f"3. **Reply to an image** with `PUBLISH BLOG {draft_id}`"
     )
 
 

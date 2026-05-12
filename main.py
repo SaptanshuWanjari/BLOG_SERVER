@@ -150,19 +150,28 @@ async def telegram_webhook(request: Request):
     text = message.get("text", "")
     caption = message.get("caption", "")
     photo = message.get("photo")
+    reply_to = message.get("reply_to_message")
 
     # Command can be in text or caption
-    cmd_text = text if text else caption
+    cmd_text = (text if text else caption).strip()
     
+    logger.info(f"Webhook received: text='{text}', caption='{caption}', has_photo={bool(photo)}, has_reply={bool(reply_to)}")
+
     if cmd_text.upper().startswith("PUBLISH BLOG"):
         parts = cmd_text.split()
         if len(parts) >= 3:
             draft_id = parts[2]
             banner_url = parts[3] if len(parts) >= 4 else None
             
-            # Case 1: Photo uploaded with caption
+            # If no photo in current message, check if it's a reply to a message with a photo
+            if not photo and reply_to:
+                photo = reply_to.get("photo")
+                if photo:
+                    logger.info(f"Using photo from replied-to message for draft {draft_id}")
+
+            # Case 1: Photo available (in message or reply) but no URL provided
             if photo and not banner_url:
-                logger.info(f"Telegram trigger: Photo upload for draft {draft_id}")
+                logger.info(f"Telegram trigger: Photo detected for draft {draft_id}")
                 # Get largest photo
                 file_id = photo[-1]["file_id"]
                 file_content = await download_telegram_file(file_id)
@@ -178,7 +187,7 @@ async def telegram_webhook(request: Request):
                 except Exception as e:
                     logger.error(f"Webhook publish failed: {e}")
             else:
-                logger.error("No banner URL found and no photo uploaded")
+                logger.error(f"No banner URL found for draft {draft_id} and no photo available.")
                 
     return {"status": "ignored"}
 
