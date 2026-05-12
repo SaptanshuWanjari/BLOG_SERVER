@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+gunicorn
 supabase
 langchain
 langchain-groq

@@ -1,0 +1,113 @@
+[
+    {
+        "title": "Core Architecture Principles",
+        "topics": [
+            {
+                "topic": "Vertical vs Horizontal Scaling",
+                "content": [
+                    "Vertical scaling means upgrading a single machine, like adding more CPU, RAM, or faster storage.",
+                    "Horizontal scaling means adding more machines and spreading work across them.",
+                    "Vertical is easier but hits hardware limits and becomes expensive.",
+                    "Horizontal is harder because you need load balancing, stateless services, and shared storage."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!3715!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F2002728e-3c0d-4ce1-b850-255e6b6ee4e4_1200x750.jpeg"
+            },
+            {
+                "topic": "CAP Theorem",
+                "content": [
+                    "CAP Theorem says that in the presence of a network partition, a distributed system must choose between Consistency and Availability.",
+                    "Consistency means every user sees the same data at the same time.",
+                    "Availability means the system always responds, even if the data might be slightly stale.",
+                    "You cannot have perfect consistency and perfect availability when your network is broken, so you decide which one to sacrifice for your use case."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!WfFu!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F1bcceca2-48a3-4c21-ac72-9179ef8474e5_1200x750.jpeg"
+            },
+            {
+                "topic": "PACELC Theorem",
+                "content": [
+                    "PACELC extends CAP and says: if there is a Partition, choose Availability or Consistency; Else choose Latency or Consistency.",
+                    "Even when the network is fine, you still trade off slow but consistent reads vs fast but eventually consistent reads.",
+                    "Systems that sync across regions often pay in latency to keep strong consistency.",
+                    "It explains why some databases are fast but slightly stale, while others are slower but always accurate."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!L9TO!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F85b4b94f-3a0f-48d9-b562-57e6e93e8b20_2816x1504.png"
+            },
+            {
+                "topic": "ACID vs BASE",
+                "content": [
+                    "ACID is about strict, reliable transactions: Atomicity, Consistency, Isolation, Durability.",
+                    "It suits financial systems, inventory, and anything where mistakes are very costly.",
+                    "BASE stands for Basically Available, Soft state, Eventual consistency and is used in large distributed systems that need to stay up and respond quickly.",
+                    "BASE systems might show temporary inconsistencies but fix themselves over time.",
+                    "In practice, many architectures combine both, using ACID for core money flows and BASE for things like feeds and analytics."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!L9TO!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F85b4b94f-3a0f-48d9-b562-57e6e93e8b20_2816x1504.png"
+            },
+            {
+                "topic": "Throughput vs Latency",
+                "content": [
+                    "Throughput is how many requests your system can handle per second.",
+                    "Latency is how long a single request takes from start to finish.",
+                    "You can often increase throughput by doing more work in parallel, but that may increase latency if queues build up.",
+                    "Think of a restaurant that takes many orders at once but makes customers wait longer.",
+                    "Good system design tries to balance both: enough throughput for peak load but low latency for a smooth user experience."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!W9LS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4e90b29f-0ec6-4314-b3fc-806bdbccbe6b_1200x750.jpeg"
+            },
+            {
+                "topic": "Amdahl's Law",
+                "content": [
+                    "Amdahl's Law says that the speedup from parallelization is limited by the part that cannot be parallelized.",
+                    "If 20 percent of your system is always sequential, no amount of extra machines will fix that bottleneck.",
+                    "If your request always has to hit a single master database, that master will cap your performance.",
+                    "This law reminds you to hunt for bottlenecks instead of just adding more servers."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!W9LS!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4e90b29f-0ec6-4314-b3fc-806bdbccbe6b_1200x750.jpeg"
+            },
+            {
+                "topic": "Strong vs Eventual Consistency",
+                "content": [
+                    "Strong consistency means all users see the same data immediately after a write.",
+                    "Eventual consistency means updates spread over time and nodes may briefly disagree.",
+                    "Strong consistency is easier to reason about but usually slower and less available under failures.",
+                    "Eventual consistency is great for large-scale systems like timelines or counters where perfect freshness is not critical.",
+                    "The key is to choose the model that matches the user experience you need."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!TU2F!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F86f7ba16-08c0-466a-9a83-1e76197f8a9c_2816x1504.png"
+            },
+            {
+                "topic": "Stateful vs Stateless Architecture",
+                "content": [
+                    "A stateful service remembers user context between requests, often storing session data locally.",
+                    "A stateless service treats every request as new, relying on external stores like caches or databases for any state.",
+                    "Stateless services are easier to scale horizontally because any instance can handle any request.",
+                    "Stateful systems can be simpler to code but harder to load balance and fail over.",
+                    "In modern cloud systems, we try to push state into databases and keep services as stateless as possible."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!XqMj!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fa05f6c72-aa26-4898-8a83-1d04689934b5_2816x1536.png"
+            },
+            {
+                "topic": "Microservices vs Monoliths",
+                "content": [
+                    "A monolith is a single application that contains many features in one deployable unit.",
+                    "Microservices split features into separate services that communicate over the network.",
+                    "Microservices help teams work independently and scale different parts separately, but introduce complexity around communication, debugging, and data consistency.",
+                    "Monoliths are simpler to start with and often fine up to a certain scale.",
+                    "Many great systems start as monoliths and gradually evolve into microservices when the pain is real."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!H1g6!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2Fe6922025-ecab-42e9-83c0-07c7e5aa4955_2816x1536.png"
+            },
+            {
+                "topic": "Serverless Architecture",
+                "content": [
+                    "Serverless lets you run small functions in the cloud without managing servers directly.",
+                    "You pay only when your code runs, and the platform handles scaling and infrastructure for you.",
+                    "It is ideal for event-driven workloads such as webhooks, background jobs, or light APIs with spiky traffic.",
+                    "The tradeoff is less control over long-running tasks, cold starts, and sometimes a higher cost at very high volumes.",
+                    "Think of serverless as functions as a service, perfect for glue code and lightweight services."
+                ],
+                "image": "https://substackcdn.com/image/fetch/$s_!Xarh!,w_1456,c_limit,f_auto,q_auto:good,fl_progressive:steep/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F389dcb47-3e31-4d5c-825c-5dffd64ec2b6_2816x1536.png"
+            }
+        ]
+    }
+]

@@ -14,10 +14,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="GDG AI Blog Automation")
 
+from pathlib import Path
+
 # Configuration
-DATASET_PATH = "../dataset/content.topic.json"
-MEMBERS_PATH = "../dataset/members.json"
+BASE_DIR = Path(__file__).parent
+DATASET_PATH = BASE_DIR / "dataset" / "content.topic.json"
+MEMBERS_PATH = BASE_DIR / "dataset" / "members.json"
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
+
 
 class PublishRequest(BaseModel):
     draft_id: str
