@@ -110,10 +110,6 @@ def execute_publish(draft_id: str, banner_url: str = None):
 
     markdown = format_blog_to_markdown(draft["content_json"])
 
-        )
-
-    markdown = format_blog_to_markdown(draft["content_json"])
-
     try:
         result = publish_blog(
             writer_id=draft["writer_id"],
