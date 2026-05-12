@@ -8,18 +8,20 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-def send_approval_request(title: str, summary: str, draft_id: str):
+def send_approval_request(title: str, summary: str, draft_id: str, publisher_name: str):
     """
     Sends a message to Discord/Telegram with the blog summary and instructions.
     """
     message = (
         f"🚀 **New AI Blog Draft Ready!**\n\n"
-        f"**Title:** {title}\n"
-        f"**Draft ID:** `{draft_id}`\n"
-        f"**Summary:** {summary[:400]}...\n\n"
-        f"To publish, reply with:\n"
+        f"👤 **Publisher:** {publisher_name}\n"
+        f"📝 **Title:** {title}\n"
+        f"🆔 **Draft ID:** `{draft_id}`\n\n"
+        f"📖 **Executive Summary:**\n{summary[:600]}...\n\n"
+        f"✅ **To publish, reply with:**\n"
         f"`PUBLISH BLOG {draft_id} [BANNER_IMAGE_URL]`"
     )
+
 
     # 1. Send to Discord (Outgoing only)
     if DISCORD_WEBHOOK_URL:

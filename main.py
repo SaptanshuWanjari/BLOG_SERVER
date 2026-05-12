@@ -60,9 +60,11 @@ def process_blog_generation():
             send_approval_request(
                 title=blog_content["title"],
                 summary=blog_content["executive_summary"],
-                draft_id=draft["id"]
+                draft_id=draft["id"],
+                publisher_name=member["name"]
             )
             logger.info(f"Draft saved and notification sent. Draft ID: {draft['id']}")
+
             
     except Exception as e:
         logger.error(f"Error in process_blog_generation: {e}", exc_info=True)
