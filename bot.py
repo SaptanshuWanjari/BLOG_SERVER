@@ -37,9 +37,23 @@ def send_approval_request(title: str, summary: str, draft_id: str, publisher_nam
         except Exception as e:
             print(f"Discord notify failed: {e}")
 
+    # 2. Send to Telegram (Supports Webhook replies)
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            with httpx.Client() as client:
+                client.post(url, json={
+                    "chat_id": TELEGRAM_CHAT_ID,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                })
+        except Exception as e:
+            print(f"Telegram notify failed: {e}")
+
 def send_publication_confirmation(chat_id: str, title: str, banner_url: str, blog_url: str = None):
     """
     Sends a confirmation message with the banner image to Telegram.
+    Falls back to text-only if image sending fails.
     """
     if not TELEGRAM_BOT_TOKEN:
         return
@@ -49,13 +63,25 @@ def send_publication_confirmation(chat_id: str, title: str, banner_url: str, blo
         caption += f"\n🔗 [Read Blog]({blog_url})"
 
     try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
         with httpx.Client() as client:
-            client.post(url, json={
+            # Try sending with photo first
+            photo_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+            resp = client.post(photo_url, json={
                 "chat_id": chat_id,
                 "photo": banner_url,
                 "caption": caption,
                 "parse_mode": "Markdown"
             })
+            
+            # If photo fails (e.g. .ico format), fallback to plain message
+            if resp.status_code != 200:
+                print(f"Telegram sendPhoto failed ({resp.status_code}), falling back to sendMessage")
+                msg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                client.post(msg_url, json={
+                    "chat_id": chat_id,
+                    "text": caption,
+                    "parse_mode": "Markdown",
+                    "disable_web_page_preview": False
+                })
     except Exception as e:
         print(f"Telegram confirmation failed: {e}")
