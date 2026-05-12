@@ -5,7 +5,7 @@ from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
 from generator import get_random_topic, get_random_member, generate_blog
 from database import get_user_id_by_email, save_draft, get_draft, publish_blog, format_blog_to_markdown, delete_draft
-from bot import send_approval_request
+from bot import send_approval_request, send_publication_confirmation
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -49,6 +49,9 @@ def process_blog_generation():
         logger.info(f"Generating blog for topic: {topic_name} by {member['name']}")
         blog_content = generate_blog(GROQ_API_KEY, topic_name, short_desc)
         
+        # Add default image from dataset if available
+        blog_content["banner_url"] = topic_item.get("image")
+        
         user_id = get_user_id_by_email(member["email"])
         if not user_id:
             logger.error(f"User {member['email']} not found in database.")
@@ -61,7 +64,8 @@ def process_blog_generation():
                 title=blog_content["title"],
                 summary=blog_content["executive_summary"],
                 draft_id=draft["id"],
-                publisher_name=member["name"]
+                publisher_name=member["name"],
+                default_banner=blog_content["banner_url"]
             )
             logger.info(f"Draft saved and notification sent. Draft ID: {draft['id']}")
             
@@ -72,11 +76,18 @@ def process_blog_generation():
 def publish_to_site(req: PublishRequest):
     return execute_publish(req.draft_id, req.banner_url)
 
-def execute_publish(draft_id: str, banner_url: str):
+def execute_publish(draft_id: str, banner_url: str = None):
     draft = get_draft(draft_id)
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
         
+    # Use provided banner_url or fallback to the one in the draft content
+    final_banner_url = banner_url or draft["content_json"].get("banner_url")
+    
+    if not final_banner_url:
+        logger.error(f"No banner URL available for draft {draft_id}")
+        raise HTTPException(status_code=400, detail="Banner URL is required but not provided or found in draft")
+
     markdown = format_blog_to_markdown(draft["content_json"])
     
     try:
@@ -84,7 +95,7 @@ def execute_publish(draft_id: str, banner_url: str):
             writer_id=draft["writer_id"],
             title=draft["title"],
             markdown=markdown,
-            image_url=banner_url
+            image_url=final_banner_url
         )
         delete_draft(draft_id)
         return {"message": "Blog published successfully!", "data": result}
@@ -162,6 +173,7 @@ async def telegram_webhook(request: Request):
         if len(parts) >= 3:
             draft_id = parts[2]
             banner_url = parts[3] if len(parts) >= 4 else None
+            chat_id = message["chat"]["id"]
             
             # If no photo in current message, check if it's a reply to a message with a photo
             if not photo and reply_to:
@@ -178,11 +190,23 @@ async def telegram_webhook(request: Request):
                 if file_content:
                     banner_url = await upload_to_cloudinary(file_content, f"banner_{draft_id}.jpg")
             
-            # Case 2: Link provided in command or photo upload successful
-            if banner_url:
-                logger.info(f"Telegram trigger: Publishing draft {draft_id} with banner {banner_url}")
+            # Case 2: Link provided in command, photo upload successful, OR default available in draft
+            if banner_url or not photo:
+                logger.info(f"Telegram trigger: Attempting to publish draft {draft_id}")
                 try:
-                    execute_publish(draft_id, banner_url)
+                    # execute_publish will handle the fallback to draft's default banner
+                    result = execute_publish(draft_id, banner_url)
+                    
+                    # Get title and used banner from the draft (before it was deleted) or result
+                    # Since execute_publish deletes the draft, we can get info from result or just pass what we have
+                    draft_title = "Blog Post" # Fallback
+                    if result and "data" in result and len(result["data"]) > 0:
+                        draft_title = result["data"][0].get("title", draft_title)
+                        final_banner = result["data"][0].get("image_url", banner_url)
+                    else:
+                        final_banner = banner_url
+
+                    send_publication_confirmation(chat_id, draft_title, final_banner)
                     return {"status": "success"}
                 except Exception as e:
                     logger.error(f"Webhook publish failed: {e}")
